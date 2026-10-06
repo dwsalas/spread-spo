@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sheet to Spotify</title>
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#5A2D82">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sheet2Spotify">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --paper: #FBFAFD;
+  --surface: #FFFFFF;
+  --ink: #241B2F;
+  --muted: #6B6176;
+  --line: #E2DAEA;
+  --mist: #F1ECF6;
+  --plum: #5A2D82;
+  --plum-ink: #FFFFFF;
+  --ok: #1F7A4A;
+  --ok-bg: #E4F3EA;
+  --warn: #9A6410;
+  --warn-bg: #FBF0D9;
+  --bad: #B03636;
+  --bad-bg: #FBE4E2;
+  --dup-bg: #EEEBF1;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #17121D; --surface: #201A28; --ink: #EFE9F5; --muted: #A99FB4; --line: #362D41; --mist: #2A2233;
+    --plum: #B98BE0; --plum-ink: #1A1220; --ok: #6CCB97; --ok-bg: #1D3327; --warn: #E3B261; --warn-bg: #3A2E17;
+    --bad: #EE8A84; --bad-bg: #3D2222; --dup-bg: #2A2433;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #17121D; --surface: #201A28; --ink: #EFE9F5; --muted: #A99FB4; --line: #362D41; --mist: #2A2233;
+  --plum: #B98BE0; --plum-ink: #1A1220; --ok: #6CCB97; --ok-bg: #1D3327; --warn: #E3B261; --warn-bg: #3A2E17;
+  --bad: #EE8A84; --bad-bg: #3D2222; --dup-bg: #2A2433;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; min-height: 100%; background: var(--paper); color: var(--ink);
+  font: 400 16px/1.55 var(--body); -webkit-font-smoothing: antialiased;
+}
+a { color: var(--plum); }
+:focus-visible { outline: 3px solid var(--plum); outline-offset: 2px; border-radius: 6px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
+
+header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 36px; }
+h1 {
+  font: 800 clamp(2.4rem, 6vw, 4.2rem)/0.95 var(--display); letter-spacing: -0.035em; margin: 0;
+}
+.lede { color: var(--muted); margin: 12px 0 0; max-width: 46ch; font-size: 1.05rem; }
+.head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.install { border-color: var(--plum); color: var(--plum); }
+.install-tip { display: none; background: var(--mist); border-radius: 12px; padding: 10px 14px; font-size: .9rem; margin: -18px 0 24px; }
+.install-tip.on { display: block; }
+.account { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
+.account .who { color: var(--muted); }
+.account .who strong { color: var(--ink); font-weight: 600; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+/* Steps */
+ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 28px 44px; }
+ol.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: -2px; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 .95rem/1 var(--display); background: var(--mist); color: var(--plum);
+}
+ol.steps > li.done::before { content: "✓"; background: var(--ok-bg); color: var(--ok); }
+h2 { font: 700 1.2rem/1.2 var(--display); margin: 0 0 4px; letter-spacing: -0.01em; }
+.hint { color: var(--muted); font-size: .9rem; margin: 0 0 10px; }
+
+label { display: block; font-weight: 600; font-size: .9rem; margin: 12px 0 6px; }
+input[type="text"], input[type="url"], select {
+  box-sizing: border-box; max-width: 100%; display: block;
+  width: 100%; font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 10px; padding: 10px 12px;
+}
+input:focus, select:focus { border-color: var(--plum); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--plum) 22%, transparent); }
+.row { display: flex; gap: 10px; align-items: center; }
+.row > input { flex: 1; min-width: 0; }
+
+.btn {
+  font: 600 .95rem/1 var(--body); border-radius: 999px; padding: 11px 18px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap;
+}
+a.btn { display: inline-block; text-decoration: none; }
+.btn:hover { border-color: var(--plum); }
+.btn.primary { background: var(--plum); border-color: var(--plum); color: var(--plum-ink); padding: 14px 24px; font-size: 1rem; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.spotify { background: #1DB954; border-color: #1DB954; color: #0B2A16; }
+.btn.small { padding: 7px 12px; font-size: .85rem; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.link { border: 0; background: none; padding: 0; color: var(--plum); text-decoration: underline; font-weight: 500; }
+
+.file-chip { display: none; align-items: center; gap: 8px; margin-top: 8px; background: var(--mist); border-radius: 8px; padding: 6px 10px; font-size: .9rem; }
+.file-chip.on { display: inline-flex; }
+.file-chip button { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 1rem; padding: 0 2px; }
+.or { color: var(--muted); font-size: .85rem; margin: 8px 0 0; }
+
+.opts { display: grid; gap: 6px; margin-top: 12px; }
+.opts label { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 0; }
+.opts input { width: 18px; height: 18px; accent-color: var(--plum); }
+.split { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+
+details.setup { background: var(--mist); border-radius: 12px; padding: 12px 14px; margin-top: 12px; font-size: .92rem; }
+details.setup summary { cursor: pointer; font-weight: 600; }
+details.setup ol { padding-left: 20px; margin: 10px 0 0; }
+details.setup li { margin-bottom: 6px; }
+code.uri { display: inline-block; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; font-size: .85rem; word-break: break-all; }
+
+/* Program (results) */
+.program-panel { background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; padding: 26px 26px 18px; min-height: 420px; }
+.program-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+.program-head h2 { font-size: 1.6rem; letter-spacing: -0.02em; }
+#playlistName { color: var(--muted); font-size: .95rem; margin: 0 0 18px; }
+.status-line { font-size: .95rem; color: var(--muted); min-height: 1.5em; margin: 0 0 18px; }
+.status-line.error { color: var(--bad); font-weight: 500; }
+
+.tally { display: flex; gap: 14px; flex-wrap: wrap; font-size: .9rem; margin-bottom: 18px; }
+.tally span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--line); }
+.dot.ADDED { background: var(--ok); } .dot.CHECK { background: var(--warn); }
+.dot.NF { background: var(--bad); } .dot.DUPLICATE { background: var(--muted); }
+
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: var(--mist); }
+.timeline .fill { position: absolute; left: 6px; top: 6px; width: 3px; border-radius: 3px; background: #1DB954; height: 0; transition: height .25s ease; }
+.section { position: relative; margin-bottom: 22px; }
+.section::before { content: ""; position: absolute; left: -27px; top: 7px; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 3px solid var(--plum); }
+.section h3 { font: 700 1.05rem/1.3 var(--display); margin: 0 0 8px; }
+.section ul { list-style: none; margin: 0; padding: 0; }
+.song { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 8px 10px; border-radius: 10px; }
+.song + .song { margin-top: 2px; }
+.chip { font-size: .75rem; font-weight: 600; border-radius: 999px; padding: 3px 9px; text-align: center; background: var(--mist); color: var(--muted); justify-self: start; }
+.song .entry { font-weight: 500; overflow-wrap: anywhere; }
+.song .match { grid-column: 2; font-size: .88rem; color: var(--muted); overflow-wrap: anywhere; }
+.song .match a { color: inherit; }
+.song.ADDED { background: var(--ok-bg); } .song.ADDED .chip { background: var(--ok); color: var(--surface); }
+.song.CHECK { background: var(--warn-bg); } .song.CHECK .chip { background: var(--warn); color: var(--surface); }
+.song.NF { background: var(--bad-bg); } .song.NF .chip { background: var(--bad); color: var(--surface); }
+.song.DUPLICATE { background: var(--dup-bg); } .song.DUPLICATE .entry { color: var(--muted); text-decoration: line-through; }
+.song.SEARCHING .chip { background: var(--plum); color: var(--plum-ink); }
+
+.empty { color: var(--muted); padding: 40px 0; max-width: 40ch; }
+.done-box { display: none; margin: 4px 0 22px; padding: 16px 18px; border-radius: 14px; background: var(--ok-bg); }
+.done-box.on { display: block; }
+.done-box p { margin: 0 0 12px; font-weight: 500; }
+.done-box .row { flex-wrap: wrap; }
+
+footer { color: var(--muted); font-size: .85rem; margin-top: 48px; }
+
+@media (prefers-reduced-motion: reduce) { .timeline .fill { transition: none; } }
+@media (max-width: 520px) {
+  .wrap { padding: 22px 16px 48px; }
+  .program-panel { padding: 20px 16px; }
+  .song { grid-template-columns: 1fr; }
+  .song .match { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Sheet to Spotify</h1>
+      <p class="lede">Paste a music planning sheet and get one Spotify playlist, in the same order as the event.</p>
+    </div>
+    <div class="head-right">
+      <button class="btn small install" id="installBtn" type="button" hidden>Install app</button>
+      <div class="account" id="account"></div>
+    </div>
+  </header>
+
+  <p class="install-tip" id="installTip">To install on iPhone or iPad: tap the Share button in Safari, then <b>Add to Home Screen</b>.</p>
+
+  <div class="layout">
+    <section aria-label="Make a playlist">
+      <ol class="steps">
+        <li id="step1">
+          <h2>Connect Spotify</h2>
+          <p class="hint">Log in with the Spotify account that should own the playlist.</p>
+          <div class="row">
+            <button class="btn spotify" id="connectBtn" type="button">Connect Spotify</button>
+          </div>
+          <details class="setup" id="setup">
+            <summary>First time setup</summary>
+            <ol>
+              <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">the Spotify developer dashboard</a> and click <b>Create app</b> (needs Spotify Premium).</li>
+              <li>Add this Redirect URI exactly:<br><code class="uri" id="redirectUri"></code> <button class="btn link" id="copyUri" type="button">Copy</button></li>
+              <li>Check <b>Web API</b>, save, then copy the <b>Client ID</b> from Settings.</li>
+            </ol>
+            <label for="clientId">Client ID</label>
+            <input type="text" id="clientId" autocomplete="off" spellcheck="false" placeholder="Paste your Client ID">
+          </details>
+        </li>
+
+        <li id="step2">
+          <h2>Add the sheet</h2>
+          <p class="hint">Songs written as "Title - Artist". Share the Google Sheet as "Anyone with the link".</p>
+          <label for="sheetLink">Google Sheets link</label>
+          <input type="url" id="sheetLink" placeholder="https://docs.google.com/spreadsheets/d/..." spellcheck="false">
+          <p class="or">or <button class="btn link" id="pickFile" type="button">upload a .xlsx or .csv file</button></p>
+          <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls,.csv" hidden>
+          <span class="file-chip" id="fileChip"><span id="fileName"></span><button type="button" id="clearFile" aria-label="Remove file">✕</button></span>
+          <div class="actions"><button class="btn" id="loadBtn" type="button">Load songs</button></div>
+        </li>
+
+        <li id="step3">
+          <h2>Make the playlist</h2>
+          <div class="split">
+            <div>
+              <label for="plName">Playlist name</label>
+              <input type="text" id="plName" placeholder="Same as the sheet title">
+            </div>
+            <div>
+              <label for="column">Column</label>
+              <select id="column"></select>
+            </div>
+          </div>
+          <div class="opts">
+            <label><input type="checkbox" id="optStrict"> Only add confident matches</label>
+            <label><input type="checkbox" id="optDupes"> Keep duplicate songs</label>
+            <label><input type="checkbox" id="optPublic"> Make the playlist public</label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="createBtn" type="button">Create playlist</button>
+            <button class="btn" id="previewBtn" type="button">Preview matches</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="program-panel" aria-label="Songs">
+      <div class="program-head">
+        <h2>Program</h2>
+        <div class="tally" id="tally"></div>
+      </div>
+      <p id="playlistName"></p>
+      <p class="status-line" id="status" role="status" aria-live="polite"></p>
+      <div class="done-box" id="doneBox">
+        <p id="doneText"></p>
+        <div class="row">
+          <a class="btn spotify" id="openPlaylist" target="_blank" rel="noopener">Open in Spotify</a>
+          <button class="btn" id="downloadReport" type="button">Download report</button>
+        </div>
+      </div>
+      <div id="program"><p class="empty">Load a sheet to see its songs here, grouped by section. Each song turns green, yellow, or red as it's matched on Spotify.</p></div>
+    </section>
+  </div>
+
+  <footer>Green: added. Yellow: added, but check the version. Red: not found, add it by hand in Spotify. Grey: duplicate, skipped. Nothing is stored except your login, on this device.</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------------- config ---------------- */
+const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, "");
+const SCOPES = "playlist-modify-private playlist-modify-public";
+const API = "https://api.spotify.com/v1";
+const SKIP = new Set(["", "none", "n/a", "na", "tbd", "tba", "insert here"]);
+const CONFIDENT_TITLE = 0.85, CONFIDENT_ARTIST = 0.75, MIN_SCORE = 0.65;
+const SHARE_MSG = "Can't read that sheet. In Google Sheets, click Share and set General access to \"Anyone with the link\", or download it as .xlsx and upload it here.";
+
+const $ = (s) => document.querySelector(s);
+const store = (area) => ({
+  get(k) { try { return JSON.parse(area.getItem(k)); } catch { return null; } },
+  set(k, v) { try { area.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { area.removeItem(k); } catch {} },
+});
+const local = store(window.localStorage), session = store(window.sessionStorage);
+
+class UserError extends Error {}
+
+/* ---------------- state ---------------- */
+let fileData = null;        // { name, rows }
+let autoName = "";
+let busy = false;
+let lastRun = null;         // { name, songs, dupes }
+
+/* ---------------- UI setup ---------------- */
+$("#redirectUri").textContent = REDIRECT_URI;
+$("#clientId").value = local.get("s2s_client_id") || "";
+$("#column").innerHTML = "ABCDEFGHIJ".split("").map(c => `<option${c === (local.get("s2s_column") || "B") ? " selected" : ""}>${c}</option>`).join("");
+if (!$("#clientId").value) $("#setup").open = true;
+
+$("#clientId").addEventListener("change", e => local.set("s2s_client_id", e.target.value.trim()));
+$("#column").addEventListener("change", e => local.set("s2s_column", e.target.value));
+$("#copyUri").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(REDIRECT_URI); $("#copyUri").textContent = "Copied"; } catch { $("#copyUri").textContent = "Select and copy"; }
+});
+$("#pickFile").addEventListener("click", () => $("#fileInput").click());
+$("#fileInput").addEventListener("change", onFile);
+$("#clearFile").addEventListener("click", () => { fileData = null; $("#fileInput").value = ""; $("#fileChip").classList.remove("on"); });
+$("#sheetLink").addEventListener("input", () => { if ($("#sheetLink").value.trim()) { fileData = null; $("#fileChip").classList.remove("on"); } });
+$("#plName").addEventListener("input", () => { autoName = ""; });
+$("#connectBtn").addEventListener("click", () => login());
+$("#loadBtn").addEventListener("click", () => guard(loadOnly));
+$("#createBtn").addEventListener("click", () => guard(() => run(false)));
+$("#previewBtn").addEventListener("click", () => guard(() => run(true)));
+$("#downloadReport").addEventListener("click", downloadReport);
+
+function setStatus(msg, isError = false) {
+  const el = $("#status");
+  el.textContent = msg;
+  el.classList.toggle("error", isError);
+}
+function setBusy(b) {
+  busy = b;
+  ["#loadBtn", "#createBtn", "#previewBtn", "#connectBtn"].forEach(s => $(s).disabled = b);
+}
+async function guard(fn) {
+  if (busy) return;
+  setBusy(true);
+  try { await fn(); }
+  catch (e) {
+    setStatus(e instanceof UserError ? e.message : `Something went wrong: ${e.message}`, true);
+    document.querySelectorAll(".song.SEARCHING").forEach(el => { el.classList.remove("SEARCHING"); el.querySelector(".chip").textContent = "Waiting"; });
+  }
+  finally { setBusy(false); }
+}
+
+/* ---------------- reading the sheet ---------------- */
+function rowsFromWorkbook(wb) {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, blankrows: true })
+    .map(r => r.map(v => (v == null ? "" : String(v))));
+}
+
+async function onFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array", raw: true });
+    fileData = { name: f.name.replace(/\.[^.]+$/, ""), rows: rowsFromWorkbook(wb) };
+    $("#fileName").textContent = f.name;
+    $("#fileChip").classList.add("on");
+    $("#sheetLink").value = "";
+    await guard(loadOnly);
+  } catch (err) {
+    setStatus("Couldn't open that file. Use .xlsx or .csv.", true);
+  }
+}
+
+async function readSheet() {
+  if (fileData) return { title: fileData.name, rows: fileData.rows };
+  const link = $("#sheetLink").value.trim();
+  if (!link) throw new UserError("Paste a Google Sheets link or upload a file first.");
+  const id = (link.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/) || [])[1];
+  if (!id) throw new UserError("That doesn't look like a Google Sheets link.");
+  const gid = (link.match(/[#&?]gid=(\d+)/) || [])[1];
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&headers=0${gid ? `&gid=${gid}` : ""}`;
+  let text;
+  try {
+    const res = await fetch(url);
+    text = await res.text();
+    if (!res.ok || /^\s*(<!doctype|<html)/i.test(text)) throw new Error("not csv");
+  } catch { throw new UserError(SHARE_MSG); }
+  const wb = XLSX.read(text, { type: "string", raw: true });
+  return { title: "", rows: rowsFromWorkbook(wb) };
+}
+
+function parseSongs(rows, colIdx, keepDupes) {
+  const songs = [], dupes = [], seen = new Set();
+  let section = "";
+  rows.forEach((row, i) => {
+    if (row[0] && row[0].trim()) section = row[0].trim().split(/\r?\n/)[0];
+    const cell = (row[colIdx] || "").replace(/\s+/g, " ").trim();
+    if (SKIP.has(cell.toLowerCase()) || !cell.includes(" - ")) return;
+    const cut = cell.lastIndexOf(" - ");
+    const song = { row: i + 1, section, raw: cell, title: cell.slice(0, cut).trim(), artist: cell.slice(cut + 3).trim(), status: "", track: null, score: 0 };
+    const key = norm(cell);
+    if (seen.has(key) && !keepDupes) { song.status = "DUPLICATE"; dupes.push(song); return; }
+    seen.add(key);
+    songs.push(song);
+  });
+  return { songs, dupes };
+}
+
+async function loadSongs() {
+  setStatus("Reading the sheet...");
+  const { title, rows } = await readSheet();
+  const col = $("#column").value;
+  const { songs, dupes } = parseSongs(rows, col.charCodeAt(0) - 65, $("#optDupes").checked);
+  if (!songs.length) throw new UserError(`No "Title - Artist" songs found in column ${col}. Try another column.`);
+  if (title && (!$("#plName").value.trim() || $("#plName").value === autoName)) { $("#plName").value = title; autoName = title; }
+  renderProgram(songs, dupes);
+  $("#step2").classList.add("done");
+  return { songs, dupes };
+}
+
+async function loadOnly() {
+  const { songs, dupes } = await loadSongs();
+  setStatus(`Found ${songs.length} songs${dupes.length ? `, ${dupes.length} duplicate skipped` : ""}.${$("#plName").value.trim() ? "" : " Type a playlist name in step 3."}`);
+}
+
+/* ---------------- matching ---------------- */
+function norm(s) {
+  const base = s.normalize("NFKC").toLowerCase();
+  let t = base.replace(/\s*[([][^)\]]*[)\]]/g, " ").replace(/\s+-\s+.*$/, "").replace(/[^\p{L}\p{N}\s]/gu, " ");
+  t = t.split(/\s+/).filter(Boolean).join(" ");
+  return t || base.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean).join(" ");
+}
+function ratio(a, b) {
+  if (!a.length && !b.length) return 1;
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return 1 - prev[n] / Math.max(m, n);
+}
+function score(song, track) {
+  const t = ratio(norm(song.title), norm(track.name || ""));
+  const sa = norm(song.artist);
+  const names = (track.artists || []).map(a => norm(a.name || ""));
+  const a = names.some(n => n && (sa.includes(n) || n.includes(sa))) ? 1
+    : Math.max(ratio(sa, names.join(" ")), ...names.map(n => ratio(sa, n)));
+  return [0.6 * t + 0.4 * a, t, a];
+}
+function queries(song) {
+  const plainArtist = song.artist.replace(/\s*\([^)]*\)/g, "").trim();
+  const q = [`track:"${song.title}" artist:"${song.artist}"`, `${song.title} ${song.artist}`];
+  if (plainArtist !== song.artist) q.push(`${song.title} ${plainArtist}`);
+  q.push(`track:"${song.title}"`);
+  return q;
+}
+async function matchSong(song, strict) {
+  let best = null, parts = [0, 0, 0];
+  for (const q of queries(song)) {
+    const data = await api("GET", `/search?${new URLSearchParams({ q, type: "track", limit: "10", market: "from_token" })}`);
+    for (const tr of (data.tracks && data.tracks.items) || []) {
+      if (!tr) continue;
+      const p = score(song, tr);
+      if (p[0] > parts[0]) { best = tr; parts = p; }
+    }
+    if (parts[1] >= CONFIDENT_TITLE && parts[2] >= CONFIDENT_ARTIST) break;
+  }
+  song.score = Math.round(parts[0] * 100) / 100;
+  song.track = best;
+  if (best && parts[1] >= CONFIDENT_TITLE && parts[2] >= CONFIDENT_ARTIST) song.status = "ADDED";
+  else if (best && parts[0] >= MIN_SCORE && !strict) song.status = "CHECK";
+  else song.status = "NOT FOUND";
+}
+
+/* ---------------- Spotify auth (PKCE) ---------------- */
+function randomString(len) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const bytes = crypto.getRandomValues(new Uint8Array(len));
+  return Array.from(bytes, b => chars[b % chars.length]).join("");
+}
+async function challengeFor(verifier) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function clientId() {
+  const id = $("#clientId").value.trim();
+  if (!id) { $("#setup").open = true; $("#clientId").focus(); throw new UserError("Paste your Spotify Client ID under First time setup."); }
+  local.set("s2s_client_id", id);
+  return id;
+}
+async function login(pending) {
+  let id;
+  try { id = clientId(); } catch (e) { setStatus(e.message, true); return; }
+  const verifier = randomString(96), state = randomString(24);
+  session.set("s2s_pkce", { verifier, state });
+  if (pending) session.set("s2s_pending", pending);
+  location.assign("https://accounts.spotify.com/authorize?" + new URLSearchParams({
+    client_id: id, response_type: "code", redirect_uri: REDIRECT_URI, scope: SCOPES,
+    state, code_challenge_method: "S256", code_challenge: await challengeFor(verifier),
+  }));
+}
+function saveToken(data) {
+  const old = local.get("s2s_token") || {};
+  local.set("s2s_token", {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || old.refresh_token,
+    expires_at: Date.now() + (data.expires_in || 3600) * 1000 - 60000,
+  });
+}
+async function tokenRequest(body) {
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new UserError(`Spotify login failed: ${data.error_description || data.error || res.status}`);
+  saveToken(data);
+}
+async function handleCallback() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has("code") && !p.has("error")) return false;
+  history.replaceState(null, "", REDIRECT_URI);
+  const pkce = session.get("s2s_pkce");
+  session.del("s2s_pkce");
+  if (p.get("error")) throw new UserError(`Spotify login was cancelled (${p.get("error")}).`);
+  if (!pkce || pkce.state !== p.get("state")) throw new UserError("Spotify login didn't match. Click Connect Spotify again.");
+  await tokenRequest({ grant_type: "authorization_code", code: p.get("code"), redirect_uri: REDIRECT_URI, client_id: clientId(), code_verifier: pkce.verifier });
+  return true;
+}
+async function accessToken() {
+  const tok = local.get("s2s_token");
+  if (!tok) return null;
+  if (Date.now() < tok.expires_at) return tok.access_token;
+  try { await tokenRequest({ grant_type: "refresh_token", refresh_token: tok.refresh_token, client_id: clientId() }); }
+  catch { local.del("s2s_token"); return null; }
+  return local.get("s2s_token").access_token;
+}
+function logout() { local.del("s2s_token"); renderAccount(null); }
+
+async function api(method, path, body) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const token = await accessToken();
+    if (!token) throw new UserError("Your Spotify login expired. Click Connect Spotify.");
+    const res = await fetch(API + path, {
+      method, headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({}));
+      if (data.error && data.error.reason === "QUOTA_EXCEEDED") throw new UserError("Spotify's usage limit for your developer app was reached. Try again later.");
+      await new Promise(r => setTimeout(r, (parseInt(res.headers.get("Retry-After") || "2", 10) + 1) * 1000));
+      continue;
+    }
+    if (res.status === 401 && attempt === 0) {
+      const tok = local.get("s2s_token"); if (tok) { tok.expires_at = 0; local.set("s2s_token", tok); }
+      continue;
+    }
+    if (res.status === 403) throw new UserError("Spotify said no (403). The app owner needs Premium, and this account must be added under User Management in the developer dashboard.");
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new UserError(`Spotify error ${res.status}: ${(data.error && data.error.message) || res.statusText}`);
+    }
+    return res.status === 204 ? {} : res.json().catch(() => ({}));
+  }
+  throw new UserError("Spotify kept rate limiting. Wait a minute and try again.");
+}
+
+function renderAccount(me) {
+  const el = $("#account");
+  if (me) {
+    el.innerHTML = `<span class="who">Connected as <strong></strong></span><button class="btn small" type="button">Disconnect</button>`;
+    el.querySelector("strong").textContent = me.display_name || me.id;
+    el.querySelector("button").addEventListener("click", logout);
+    $("#step1").classList.add("done");
+    $("#connectBtn").textContent = "Connected";
+    $("#connectBtn").disabled = true;
+  } else {
+    el.innerHTML = "";
+    $("#step1").classList.remove("done");
+    $("#connectBtn").textContent = "Connect Spotify";
+    $("#connectBtn").disabled = false;
+  }
+}
+
+/* ---------------- program rendering ---------------- */
+const CLASS = { "NOT FOUND": "NF", ADDED: "ADDED", CHECK: "CHECK", DUPLICATE: "DUPLICATE" };
+const LABEL = { ADDED: "Added", CHECK: "Check", "NOT FOUND": "Not found", DUPLICATE: "Duplicate" };
+
+function renderProgram(songs, dupes) {
+  const all = [...songs, ...dupes].sort((a, b) => a.row - b.row);
+  const prog = $("#program");
+  prog.innerHTML = "";
+  const tl = document.createElement("div");
+  tl.className = "timeline";
+  tl.innerHTML = `<div class="fill" id="fill"></div>`;
+  let current = null, list = null;
+  for (const s of all) {
+    if (!current || current !== s.section) {
+      current = s.section;
+      const sec = document.createElement("div");
+      sec.className = "section";
+      const h = document.createElement("h3");
+      h.textContent = s.section || "Songs";
+      list = document.createElement("ul");
+      sec.append(h, list);
+      tl.append(sec);
+    }
+    const li = document.createElement("li");
+    li.className = "song" + (s.status ? " " + CLASS[s.status] : "");
+    li.id = "song-" + s.row;
+    li.innerHTML = `<span class="chip"></span><span class="entry"></span><span class="match"></span>`;
+    li.querySelector(".chip").textContent = s.status ? LABEL[s.status] : "Waiting";
+    li.querySelector(".entry").textContent = s.raw;
+    list.append(li);
+  }
+  prog.append(tl);
+  $("#tally").innerHTML = "";
+  $("#doneBox").classList.remove("on");
+  $("#playlistName").textContent = "";
+}
+
+function markSearching(song) {
+  const li = $("#song-" + song.row);
+  li.className = "song SEARCHING";
+  li.querySelector(".chip").textContent = "Searching";
+  li.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+function updateSong(song) {
+  const li = $("#song-" + song.row);
+  li.className = "song " + CLASS[song.status];
+  li.querySelector(".chip").textContent = LABEL[song.status];
+  const m = li.querySelector(".match");
+  m.textContent = "";
+  if (song.track) {
+    const label = `${song.track.name} - ${(song.track.artists || []).map(a => a.name).join(", ")}`;
+    const url = song.track.external_urls && song.track.external_urls.spotify;
+    if (url && song.status !== "NOT FOUND") {
+      const a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = label;
+      m.append("Spotify: ", a);
+    } else if (song.status === "NOT FOUND") {
+      m.textContent = `Closest result was "${label}", not added.`;
+    }
+  } else if (song.status === "NOT FOUND") {
+    m.textContent = "No result on Spotify.";
+  }
+}
+
+function setProgress(done, total) {
+  const fill = $("#fill");
+  if (fill) fill.style.height = `calc(${(done / Math.max(total, 1)) * 100}% - 12px)`;
+}
+
+function renderTally(songs, dupes) {
+  const c = k => songs.filter(s => s.status === k).length;
+  $("#tally").innerHTML = `
+    <span><i class="dot ADDED"></i>${c("ADDED")} added</span>
+    <span><i class="dot CHECK"></i>${c("CHECK")} to check</span>
+    <span><i class="dot NF"></i>${c("NOT FOUND")} not found</span>
+    ${dupes.length ? `<span><i class="dot DUPLICATE"></i>${dupes.length} duplicate</span>` : ""}`;
+}
+
+/* ---------------- main run ---------------- */
+async function run(dry) {
+  clientId();
+  if (!(await accessToken())) {
+    const pending = {
+      dry, link: $("#sheetLink").value.trim(), file: fileData, name: $("#plName").value, autoName,
+      column: $("#column").value, strict: $("#optStrict").checked, dupes: $("#optDupes").checked, pub: $("#optPublic").checked,
+    };
+    setStatus("Opening Spotify login...");
+    await login(pending);
+    return;
+  }
+
+  const { songs, dupes } = await loadSongs();
+  const name = $("#plName").value.trim();
+  if (!name) { $("#plName").focus(); throw new UserError("Type a playlist name in step 3. Google Sheets links don't share their title, so copy it from the sheet."); }
+  $("#playlistName").textContent = name;
+  const strict = $("#optStrict").checked;
+
+  for (let i = 0; i < songs.length; i++) {
+    setStatus(`Searching Spotify, ${i + 1} of ${songs.length}`);
+    markSearching(songs[i]);
+    await matchSong(songs[i], strict);
+    updateSong(songs[i]);
+    setProgress(i + 1, songs.length);
+  }
+  renderTally(songs, dupes);
+  lastRun = { name, songs, dupes };
+
+  const count = k => songs.filter(s => s.status === k).length;
+  const followUp = count("CHECK") || count("NOT FOUND") ? " Review the yellow and red songs below." : "";
+  if (dry) {
+    setStatus("Preview done. No playlist was created.");
+    showDone(null, `Preview done: ${count("ADDED") + count("CHECK")} of ${songs.length} songs would be added.${followUp}`);
+    return;
+  }
+
+  const uris = songs.filter(s => s.status === "ADDED" || s.status === "CHECK").map(s => s.track.uri);
+  if (!uris.length) throw new UserError("No songs matched, so no playlist was created.");
+  setStatus("Creating the playlist...");
+  const pl = await api("POST", "/me/playlists", { name, public: $("#optPublic").checked, description: "Made with Sheet to Spotify" });
+  for (let i = 0; i < uris.length; i += 100) {
+    await api("POST", `/playlists/${pl.id}/items`, { uris: uris.slice(i, i + 100) });
+  }
+  const check = await api("GET", `/playlists/${pl.id}`);
+  const total = check.items && typeof check.items.total === "number" ? check.items.total : uris.length;
+  setStatus("Playlist created.");
+  $("#step3").classList.add("done");
+  showDone(pl.external_urls && pl.external_urls.spotify, `Playlist created with ${total} of ${songs.length} songs.${followUp}`);
+}
+
+function showDone(url, text) {
+  $("#doneText").textContent = text;
+  const open = $("#openPlaylist");
+  if (url) { open.href = url; open.style.display = ""; } else { open.style.display = "none"; }
+  $("#doneBox").classList.add("on");
+}
+
+function downloadReport() {
+  if (!lastRun) return;
+  const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["Sheet row", "Section", "Sheet entry", "Status", "Spotify title", "Spotify artist", "Score", "Spotify link"].map(esc).join(",")];
+  for (const s of [...lastRun.songs, ...lastRun.dupes].sort((a, b) => a.row - b.row)) {
+    const t = s.track || {};
+    lines.push([s.row, s.section, s.raw, s.status, t.name || "", (t.artists || []).map(a => a.name).join(", "),
+      s.score || "", (t.external_urls && t.external_urls.spotify) || ""].map(esc).join(","));
+  }
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${lastRun.name.replace(/[\\/:*?"<>|]+/g, "_")} - report.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------------- install as an app ---------------- */
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+let installEvent = null;
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installEvent = e;
+  $("#installBtn").hidden = false;
+});
+window.addEventListener("appinstalled", () => { $("#installBtn").hidden = true; installEvent = null; });
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (isIOS && !standalone) $("#installBtn").hidden = false;
+$("#installBtn").addEventListener("click", async () => {
+  if (installEvent) {
+    installEvent.prompt();
+    await installEvent.userChoice.catch(() => {});
+    installEvent = null;
+    $("#installBtn").hidden = true;
+  } else {
+    $("#installTip").classList.toggle("on");
+  }
+});
+
+/* ---------------- start ---------------- */
+(async () => {
+  if (!window.XLSX) { setStatus("The spreadsheet reader didn't load. Check your internet connection and refresh.", true); return; }
+  try { await handleCallback(); } catch (e) { setStatus(e.message, true); }
+  if (await accessToken()) {
+    try { renderAccount(await api("GET", "/me")); } catch { renderAccount(null); }
+  }
+  const pending = session.get("s2s_pending");
+  session.del("s2s_pending");
+  if (pending && (await accessToken())) {
+    $("#sheetLink").value = pending.link || "";
+    fileData = pending.file || null;
+    if (fileData) { $("#fileName").textContent = fileData.name; $("#fileChip").classList.add("on"); }
+    $("#plName").value = pending.name || ""; autoName = pending.autoName || "";
+    $("#column").value = pending.column || "B";
+    $("#optStrict").checked = !!pending.strict; $("#optDupes").checked = !!pending.dupes; $("#optPublic").checked = !!pending.pub;
+    guard(() => run(pending.dry));
+  }
+})();
+})();
+</script>
+</body>
+</html>
